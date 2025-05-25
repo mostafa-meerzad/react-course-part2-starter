@@ -255,7 +255,9 @@ In `Axios` all errors are instances of `Error` interface that is available on al
 
 so for `useQuery` hook we need to specify the type of errors that might happen while fetching data.
 
-`useQuery<APICallDataType, ErrorDataType>({queryKey:["yourKey"], queryFn:()=>doSomeThing})`
+`useQuery<APICallbackReturnDataType, ErrorDataType>({queryKey:["yourKey"], queryFn:()=>doSomeThing})`
+
+so when providing the "error" type we have to provide data type for the query callback function as well, as part of Typescript generics requirements
 
 ```tsx
 const TodoList = () => {
