@@ -454,3 +454,164 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
 ```
 
 now you are done! really brilliant! 😎😎
+
+## Customize React Query Settings
+
+this is where you really start to take control of behavior like **when** and **how** data is fetched, **how long** it's cached, **retry strategies**, and more.
+
+---
+
+### 🎛️ Common Query Settings
+
+When you use `useQuery`, you can pass a **configuration object** like this:
+
+```tsx
+useQuery({
+  queryKey: ["games"],
+  queryFn: fetchGames,
+  staleTime: 1000 * 60, // 1 minute
+  cacheTime: 1000 * 300, // 5 minutes
+  refetchOnWindowFocus: false,
+  retry: 2,
+  enabled: true,
+});
+```
+
+Here’s a breakdown of the most important settings:
+
+---
+
+### ⏰ `staleTime`
+
+- Time in **ms** that data is considered "fresh"
+- Until this time passes, React Query won’t refetch automatically
+- Prevents over-fetching
+
+**Example:**
+
+```ts
+staleTime: 1000 * 60; // 1 minute
+```
+
+**Note**: `staleTime` is `0` by default so you might see the same request repeated multiple times, in the browser. and that is because change of focus on that browser tab
+
+---
+
+### 🗃️ `cacheTime`
+
+- How long unused data stays in memory
+- After this time, it’s garbage collected
+- Used when a component **unmounts**, then remounts
+
+**Example:**
+
+```ts
+cacheTime: 1000 * 300; // 5 minutes
+```
+
+---
+
+### 🔁 `refetchOnWindowFocus`
+
+- Automatically refetches when user returns to the tab/window
+- Great for real-time-ish apps
+- Default: `true`
+
+**Example:**
+
+```ts
+refetchOnWindowFocus: false;
+```
+
+---
+
+### 🔄 `refetchInterval`
+
+- Enables **polling**
+- Data is automatically refetched every X milliseconds
+
+**Example:**
+
+```ts
+refetchInterval: 10000; // every 10 seconds
+```
+
+---
+
+### ✅ `enabled`
+
+- Controls **whether the query should run**
+- Useful for **conditional fetching**
+
+**Example:**
+
+```ts
+enabled: !!userId;
+```
+
+---
+
+### 🔁 `retry` and `retryDelay`
+
+- Retry failed requests
+- Customize how many times and how long between retries
+
+**Example:**
+
+```ts
+retry: 3,
+retryDelay: attempt => attempt * 1000
+```
+
+### `refetchOnWindowFocus`
+
+- refetch data as you come back to the tab, that the app is open
+- default value `true`, you don't need to alter this unless your app requires such behavior
+
+### `refetchOnReconnect`
+
+- fetch data when you've lost internet connection at the moment you reconnect
+- default `true` you can alter as needed
+
+### `refetchOnMount`
+
+- fetch data when the component is mounted in the DOM
+- default `true` you can alter as needed
+
+---
+
+### 🛠 Example with Multiple Custom Settings
+
+```tsx
+useQuery({
+  queryKey: ["games"],
+  queryFn: fetchGames,
+  staleTime: 60 * 1000,
+  cacheTime: 5 * 60 * 1000,
+  refetchOnWindowFocus: true,
+  refetchInterval: 30000,
+  retry: 2,
+  enabled: true,
+});
+```
+
+---
+
+### 🧠 Tip: Set Defaults Globally
+
+If you want to apply these settings across your whole app, use `QueryClient`:
+
+```tsx
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000,
+      cacheTime: 5 * 60 * 1000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+```
+
+**Note**: when data is `stale` RQ tries to fetch fresh data, and at the mean time it show the old/cached data to the user, as soon as it successfully gets fresh data it update UI, thus showing fresh data.
