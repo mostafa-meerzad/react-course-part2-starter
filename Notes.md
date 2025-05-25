@@ -617,3 +617,167 @@ const queryClient = new QueryClient({
 ```
 
 **Note**: when data is `stale` RQ tries to fetch fresh data, and at the mean time it show the old/cached data to the user, as soon as it successfully gets fresh data it update UI, thus showing fresh data.
+
+## Parameterized Queries
+
+Let's fetch hierarchical/nested resources, like a situation where you have: three users and each user has ten posts, and you want to fetch posts specific for that user, dynamically.
+
+### Implement User selection component
+
+```tsx
+import { useState } from "react";
+import usePosts from "../hooks/usePosts";
+
+const PostList = () => {
+  const { data: posts, error, isLoading } = usePosts();
+  // define a state to keep track of selected user
+  const [userId, setUserId] = useState<number>();
+
+  if (isLoading) return <p>loading...</p>;
+  if (error) return <p>{error.message}</p>;
+
+  return (
+    <>
+      <select
+        name="users"
+        id="users"
+        className="form-select mb-3"
+        onChange={(event) => setUserId(parseInt(event.target.value))}
+        value={userId}
+      >
+        <option value=""></option>
+        <option value="1">user 1</option>
+        <option value="2">user 2</option>
+        <option value="3">user 3</option>
+      </select>
+      <ul className="list-group">
+        {posts?.map((post) => (
+          <li key={post.id} className="list-group-item">
+            {post.title}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+};
+
+export default PostList;
+```
+
+### Fetch data for selected user
+
+now that we have a state tracking the selected user, we need to pass `userId` to our `usePosts` hook so we can filter users, like so
+
+```ts
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+
+interface Post {
+  id: number;
+  title: string;
+  body: string;
+  userId: number;
+}
+// userId can be either a selected number or undefined when no user is selected
+const usePosts = (userId: number | undefined) => {
+  const fetchPosts = () =>
+    axios
+      .get<Post[]>("https://jsonplaceholder.typicode.com/posts")
+      .then((res) => res.data);
+
+  return useQuery<Post[], Error>({
+    queryKey: ["posts"],
+    queryFn: fetchPosts,
+    staleTime: 60 * 1000,
+    cacheTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+};
+
+export default usePosts;
+```
+
+so far we're dealing with simple data but, now we're dealing with hierarchical data and need to structure our `queryKey` differently, so we should follow a hierarchical structure that represents the relationship between our objects.
+
+1. we start with top-level object, `users`
+2. add `userId` as the second one
+3. add `posts` as the last part
+
+`queryKey:["users", userId, "posts"]`
+
+just like the structure we follow in `Restful API's`, if we were to build an API to get posts for a specific user, `/users/1/posts`, as you can see it gets more specific as we go from left to right.
+
+now for our `queryKey:["users", userId, "posts"]`, `userId` is a parameter for this query and every time `userId` changes `RQ` will automatically fetch the post for that user from the backend, think of it like the `dependency array` for `useEffect` hook, every time one of the dependency array items change the hook is rerendered.
+
+we could do something like the following
+
+```ts
+const fetchPosts = () =>
+  axios
+    .get<Post[]>("https://jsonplaceholder.typicode.com/posts?userId=1")
+    .then((res) => res.data);
+```
+
+but that is ugly and in the long run make it hard to read.
+
+instead, to as follows, by the way, it is `Axios` so we need to use it's capabilities!
+
+```ts
+const fetchPosts = () =>
+  axios
+    .get<Post[]>("https://jsonplaceholder.typicode.com/posts", {
+      params: { userId },
+    })
+    .then((res) => res.data);
+```
+
+### full example
+
+```ts
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+
+interface Post {
+  id: number;
+  title: string;
+  body: string;
+  userId: number;
+}
+
+const usePosts = (userId: number | undefined) => {
+  const fetchPosts = () =>
+    axios
+      .get<Post[]>("https://jsonplaceholder.typicode.com/posts", {
+        params: { userId },
+      })
+      .then((res) => res.data);
+
+  return useQuery<Post[], Error>({
+    queryKey: ["users", userId, "posts"],
+    queryFn: fetchPosts,
+    staleTime: 60 * 1000,
+    cacheTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+};
+
+export default usePosts;
+```
+
+**Notice**: here we have a tiny issue that can be improved, when no user is selected we get `["users",null,"posts"]` and if a user is selected `["users",1,"posts"]`. wouldn't it be nice that there was not null value.
+
+here is the solution
+
+use an expression in the `queryKey` that evaluates to different keys based on selected `userId`
+
+`queryKey: userId ? ["users", userId, "posts"] : ["posts"],`
+
+```ts
+return useQuery<Post[], Error>({
+  queryKey: userId ? ["users", userId, "posts"] : ["posts"],
+  queryFn: fetchPosts,
+  staleTime: 60 * 1000,
+  cacheTime: 5 * 60 * 1000,
+  refetchOnWindowFocus: false,
+});
+```
