@@ -321,3 +321,103 @@ const TodoList = () => {
    if (isLoading) return <p>loading...</p>
 
 ```
+
+## Create a Custom Query Hook
+
+With our current implementation we are doing separate things in one place, there is no Separation Of Concerns.
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+
+interface Todo {
+  id: number;
+  title: string;
+  userId: number;
+  completed: boolean;
+}
+
+const fetchTodos = () =>
+  axios
+    .get<Todo[]>("https://jsonplaceholder.typicode.com/todos")
+    .then((response) => response.data);
+
+const TodoList = () => {
+  const { data: todos, error } = useQuery<Todo[], Error>({
+    queryKey: ["todos"],
+    queryFn: fetchTodos,
+  });
+
+  if (error) return <p>{error.message}</p>;
+
+  return (
+    <ul className="list-group">
+      {todos?.map((todo) => (
+        <li key={todo.id} className="list-group-item">
+          {todo.title}
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+export default TodoList;
+```
+
+so let's move our query logic into a custom hook `useTodos.ts`
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+
+interface Todo {
+  id: number;
+  title: string;
+  userId: number;
+  completed: boolean;
+}
+
+const useTodos = () => {
+  const fetchTodos = () =>
+    axios
+      .get<Todo[]>("https://jsonplaceholder.typicode.com/todos")
+      .then((response) => response.data);
+
+  return useQuery<Todo[], Error>({
+    queryKey: ["todos"],
+    queryFn: fetchTodos,
+  });
+};
+
+export default useTodos;
+```
+
+and update our `TodoList.tsx` component
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+import useTodos from "../hooks/useTodos";
+
+const TodoList = () => {
+  const { data: todos, error, isLoading } = useTodos();
+
+  if (isLoading) return <p>loading...</p>;
+
+  if (error) return <p>{error.message}</p>;
+
+  return (
+    <ul className="list-group">
+      {todos?.map((todo) => (
+        <li key={todo.id} className="list-group-item">
+          {todo.title}
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+export default TodoList;
+```
+
+see how beautiful 😎 is it!
