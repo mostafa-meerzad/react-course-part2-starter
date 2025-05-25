@@ -421,3 +421,36 @@ export default TodoList;
 ```
 
 see how beautiful 😎 is it!
+
+## Using React Query Devtools
+
+RQ comes with a devtools library that allows us to really inspect our query data and check different related states.
+
+### Installation
+
+run `npm i @tanstack/react-query-devtools` or `npm i @tanstack/react-query-devtools@4.28` for a specific version.
+
+then import `ReactQueryDevtools` component into the `main.tsx` component
+
+```tsx
+import "bootstrap/dist/css/bootstrap.css";
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import App from "./App";
+import "./index.css";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+
+const queryClient = new QueryClient();
+
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <App />
+      <ReactQueryDevtools />
+    </QueryClientProvider>
+  </React.StrictMode>
+);
+```
+
+now you are done! really brilliant! 😎😎
