@@ -306,3 +306,18 @@ const TodoList = () => {
 
 export default TodoList;
 ```
+
+## Handle Loading State
+
+Handling loading state with RQ is straightforward and easy, just grab `isLoading` from `useQuery` hook, which is a boolean value indicating loading state
+
+```tsx
+const TodoList = () => {
+  const {data: todos, error, isLoading} = useQuery<Todo[], Error>({
+    queryKey: ["todos"],
+    queryFn: fetchTodos
+  });
+
+   if (isLoading) return <p>loading...</p>
+
+```
