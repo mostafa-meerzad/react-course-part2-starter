@@ -160,3 +160,76 @@ Use React Query when:
 - You want caching and background updates
 - You need better UX with fewer bugs
 - You want to simplify your data fetching logic
+
+## Set Up React Query
+
+Inside the 'main.tsx' component, import `QueryClient` and `QueryClientProvider` then create a new `queryClient` object
+
+```tsx
+import "bootstrap/dist/css/bootstrap.css";
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import App from "./App";
+import "./index.css";
+
+const queryClient = new QueryClient();
+
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
+  </React.StrictMode>
+);
+```
+
+## Using React Query to Fetch Data
+
+To use React Query, we use `useQuery` hook.
+
+`useQuery` takes a configuration object `{queryKey: [uniqueQueryId], queryFn: ()=> function to fetch data}`.
+
+- `queryKey`: is a unique identifier which tells what type of data we're fetching, for each query and is internally used for caching data.
+- `queryFn`: is just a callback function that fetch data! React Query doesn't care how we fetch the data so we can use `fetch` API, `axios` or anything else you want.
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+
+interface Todo {
+  id: number;
+  title: string;
+  userId: number;
+  completed: boolean;
+}
+
+const fetchTodos = () =>
+  axios
+    .get<Todo[]>("https://jsonplaceholder.typicode.com/todos")
+    .then((response) => response.data);
+    // in this fetch function we return the actual data, that we receive from the server
+
+const TodoList = () => {
+  // here we destructure the object provided by `useQuery` and get data, for convenience we rename it as `todos`
+  const { data: todos } = useQuery({
+    queryKey: ["todos"],
+    queryFn: fetchTodos,
+  });
+
+  // if (error) return <p>{error}</p>;
+
+  return (
+    <ul className="list-group">
+     /*{todos might be undefined in case call to server fails, so use optional chaining}*/
+      {todos?.map((todo) => (
+        <li key={todo.id} className="list-group-item">
+          {todo.title}
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+export default TodoList;
+```
