@@ -233,3 +233,76 @@ const TodoList = () => {
 
 export default TodoList;
 ```
+
+## Handling Errors
+
+The `useQuery` hook also gives an "error" property which represents the error happened wile fetching data.
+
+if we don't specify the type of error React-Query doesn't know what type of error it is, and that is very dependant on what library we're using or just 'fetch' function is used
+
+```tsx
+const TodoList = () => {
+  const {data: todos, error} = useQuery({
+    queryKey: ["todos"],
+    queryFn: fetchTodos
+  });
+
+  if (error) return <p>{error}</p>;
+
+```
+
+In `Axios` all errors are instances of `Error` interface that is available on all browsers.
+
+so for `useQuery` hook we need to specify the type of errors that might happen while fetching data.
+
+`useQuery<APICallDataType, ErrorDataType>({queryKey:["yourKey"], queryFn:()=>doSomeThing})`
+
+```tsx
+const TodoList = () => {
+  const {data: todos, error} = useQuery<Todo[], Error>({
+    queryKey: ["todos"],
+    queryFn: fetchTodos
+  });
+```
+
+---
+
+### full Example
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+
+interface Todo {
+  id: number;
+  title: string;
+  userId: number;
+  completed: boolean;
+}
+
+const fetchTodos = () =>
+  axios
+    .get<Todo[]>("https://jsonplaceholder.typicode.com/todos")
+    .then((response) => response.data);
+
+const TodoList = () => {
+  const { data: todos, error } = useQuery<Todo[], Error>({
+    queryKey: ["todos"],
+    queryFn: fetchTodos,
+  });
+
+  if (error) return <p>{error.message}</p>;
+
+  return (
+    <ul className="list-group">
+      {todos?.map((todo) => (
+        <li key={todo.id} className="list-group-item">
+          {todo.title}
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+export default TodoList;
+```
