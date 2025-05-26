@@ -2,34 +2,33 @@ import { useState } from "react";
 import usePosts from "../hooks/usePosts";
 
 const PostList = () => {
-  // define a state to keep track of selected user
-  const [userId, setUserId] = useState<number>();
-  const { data: posts, error, isLoading } = usePosts(userId);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
-  if (isLoading) return <p>loading...</p>;
-  if (error) return <p>{error.message}</p>;
+  const { data: posts, error, isLoading } = usePosts({ page, pageSize });
+  
+  if(isLoading) return <p>loading...</p>
 
   return (
     <>
-      <select
-        name="users"
-        id="users"
-        className="form-select mb-3"
-        onChange={(event) => setUserId(parseInt(event.target.value))}
-        value={userId}
-      >
-        <option value=""></option>
-        <option value="1">user 1</option>
-        <option value="2">user 2</option>
-        <option value="3">user 3</option>
-      </select>
-      <ul className="list-group">
+      <ul className="list-group my-5">
         {posts?.map((post) => (
           <li key={post.id} className="list-group-item">
             {post.title}
           </li>
         ))}
       </ul>
+
+      <button
+        className="btn btn-primary me-3"
+        disabled={page === 1}
+        onClick={() => setPage(page - 1)}
+      >
+        Previous
+      </button>
+      <button className="btn btn-primary" onClick={() => setPage(page + 1)}>
+        Next
+      </button>
     </>
   );
 };

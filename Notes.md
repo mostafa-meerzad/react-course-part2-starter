@@ -781,3 +781,81 @@ return useQuery<Post[], Error>({
   refetchOnWindowFocus: false,
 });
 ```
+
+## Paginated Queries
+
+**Pagination** is the process of dividing a large set of data into smaller chunks (called "pages") to make it easier to display and navigate.
+
+For example:
+If you have 100 blog posts and only want to show **10 per page**, you’ll end up with **10 pages**.
+
+---
+
+## 🧠 Why Use Pagination?
+
+- 🔄 Avoid loading all data at once (which is slow and heavy).
+- 📱 Improve user experience (faster, easier to scroll).
+- ⚙️ Reduce server load and API bandwidth.
+
+---
+
+## 📦 Common Concepts
+
+Let’s break it down with a real example:
+
+Assume:
+
+- Total items = 100
+- Items per page = 10
+
+We use:
+
+| Term     | Meaning                 | Example          |
+| -------- | ----------------------- | ---------------- |
+| `limit`  | How many items per page | 10               |
+| `offset` | How many items to skip  | Page 2 → skip 10 |
+| `page`   | Which page we're on     | Page 2           |
+
+There are **two common styles** of pagination.
+
+### Implement Pagination with RQ
+
+first we need to define a `state` variable to keep track of current page
+and a since the page-size doesn't change we can declare it as a local variable.
+
+then remove passing separate arguments to the `usePosts` and replace it with a `Query Object`, this query object is nothing specific to RQ but it is a Design Pattern, to make our code much cleaner and readable plus future-proof.
+
+```tsx
+interface Post {
+  id: number;
+  title: string;
+  body: string;
+  userId: number;
+}
+
+// this PostQuery object saves us a lot of time and refactoring in the future. but for now it's only about pagination, later we can add more to it.
+interface PostQuery {
+  page: number;
+  pageSize: number;
+}
+const usePosts = (query: PostQuery) => {
+  return useQuery<Post[], Error>({
+    // again we change our queryKey, now the query object is part of our queryKey and whenever that object changes it
+    queryKey: ["posts", query],
+    queryFn: () =>
+      axios
+        .get<Post[]>("https://jsonplaceholder.typicode.com/posts", {
+          params: {
+            _start: (query.page - 1) * query.pageSize,
+            _limit: query.pageSize,
+          },
+        })
+        .then((res) => res.data),
+    staleTime: 60 * 1000,
+    cacheTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    keepPreviousData: true,
+    // now we need to have "keepPreviousData" config option to deliver a better UX so our page content doesn't jump all over the place. this option tells RQ to show the old data while fetching the next-page content
+  });
+};
+```
