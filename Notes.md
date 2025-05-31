@@ -859,3 +859,405 @@ const usePosts = (query: PostQuery) => {
   });
 };
 ```
+
+## Infinite Queries
+
+To fetch data as user reaches the end of the page, we can implement this feature either by clicking "show more" or just scrolling which we'll get to that latter.
+
+### Implement Infinite Query
+
+1. use `useInfiniteQuery` instead of `useQuery`, with `infinite query` we cannot use `state hook` to track pages, it can cause conflicts with cache and data consistency, by the way `useInfiniteQuery` handle page numbers itself.
+2. now how to calculate the page number with `infinite query`, well it has `getNextPageParam` property. `(lastPage, pages)=>nextPageNumber`
+
+`lastPage` and `pages` do seem weird at first if you haven’t seen how `useInfiniteQuery` works internally. Let’s break them down **clearly and visually** so they make perfect sense.
+
+## 🔍 What Are `lastPage` and `pages` in `getNextPageParam`?
+
+These are the arguments passed to the `getNextPageParam` function in `useInfiniteQuery`.
+
+```tsx
+getNextPageParam: (lastPage, pages) => {
+  // so if we're in page 1 we should return 2
+  // 1 -> 2
+  // this implementation varies from backend to backend
+  // for some backend we can do:
+  // "pages" contain all the fetched pages in an array
+  // lastPage is the last fetched page
+  // so if we're in page 1, then lastPage is undefined and we can return pages.length + 1
+  // but we don't want to return nextPage number for ever!
+  // ------
+  // for jsonplaceholder api we can do
+  // lastPage.length > 0 ? pages.length + 1 : undefined
+  //
+  // NOTE: a good backend should return the number of pages ahead of time so we can calculate the next page number
+  return lastPage.nextPage; // this logic is for different api that provides the next pageNumber
+};
+```
+
+### ▶️ 1. `lastPage`
+
+- This is the **last result** your query function (`queryFn`) returned.
+- It's **one single page of data** — the most recently fetched one.
+
+For example:
+
+```json
+{
+  "posts": [ ...10 posts... ],
+  "nextPage": 4,
+  "hasMore": true
+}
+```
+
+So `lastPage.nextPage` might be `4`.
+
+---
+
+### ▶️ 2. `pages`
+
+- This is an **array of all fetched pages so far**.
+- React Query stores and combines each `queryFn` result here.
+
+Example:
+
+```ts
+pages = [
+  { posts: [...10 posts...], nextPage: 2 },
+  { posts: [...10 posts...], nextPage: 3 },
+  { posts: [...10 posts...], nextPage: 4 }
+]
+```
+
+It grows every time you call `fetchNextPage()`.
+
+---
+
+## 📦 How React Query Uses Them
+
+When you call `fetchNextPage()`, React Query needs to know what to pass next.
+
+```tsx
+getNextPageParam: (lastPage, pages) => {
+  return lastPage.nextPage;
+};
+```
+
+- `lastPage` is the most recently fetched page — you inspect it.
+- If you return a value (like `4`), it gets passed as `pageParam` into your `queryFn`.
+- If you return `undefined`, React Query **stops fetching** more pages.
+
+---
+
+## 🧠 Flow in Your Head
+
+Let’s say your app fetches 3 pages of posts using:
+
+```tsx
+queryFn: ({ pageParam = 1 }) => fetch(`/posts?page=${pageParam}`);
+```
+
+Here's the flow:
+
+1. Page 1 loads
+   → `lastPage = page1`, `pages = [page1]`
+   → `getNextPageParam(page1, [page1])` → returns `2`
+
+2. Page 2 loads
+   → `lastPage = page2`, `pages = [page1, page2]`
+   → `getNextPageParam(page2, [page1, page2])` → returns `3`
+
+3. Page 3 loads
+   → `lastPage = page3`, `pages = [page1, page2, page3]`
+   → `getNextPageParam(page3, [...])` → returns `undefined`
+   → No more pages to fetch
+
+---
+
+## ✅ Summary
+
+| Name       | Type                            | What it is                    |
+| ---------- | ------------------------------- | ----------------------------- |
+| `lastPage` | `object`                        | The last fetched page         |
+| `pages`    | `array`                         | All previously fetched pages  |
+| Returned   | `number \| string \| undefined` | The next `pageParam` to fetch |
+
+3. now when we call `fetchNextPage` function to load more data `RQ` passes the `pageNumber` to our `queryFn` so we need to accept that argument which we need it to pass to the backend so we can get the next page data.
+
+that `pageNumber` is passed in an object as `{pageParam}` se in out `queryFn` we destructure it and grab `pageParam` then it is initialized to `1` so we get the first page as our first fetch results
+
+```ts
+ queryFn: ({pageParam = 1}) =>
+      axios
+        .get<Post[]>("https://jsonplaceholder.typicode.com/posts", {
+          params: {
+            _start: (pageParam - 1) * query.pageSize,
+            _limit: query.pageSize,
+          },
+        })
+        .then((res) => res.data),
+```
+
+4. now to fetch data for the next page we need to call `fetchNextPage` which is provided by `useInfiniteQuery`
+
+```ts
+const {
+  data: posts,
+  error,
+  isLoading,
+  fetchNextPage,
+  isFetchingNextPage,//  this one
+} = usePosts({ pageSize });
+
+const Component()=>{
+  return (
+
+      <button
+        className="btn btn-primary me-3"
+        onClick={() => fetchNextPage()}
+        disabled={isFetchingNextPage}
+      >
+        {isFetchingNextPage ? "loading..." : "load more"}
+      </button>
+  )
+}
+```
+
+5. now as final step to show all fetched data to the user
+
+```tsx
+<ul className="list-group my-5">
+// see here we want to iterate over the fetched data but it's no longer an array of posts `Post[]`
+// it is `const posts: InfiniteData<Post[]> | undefined` of type `InfiniteData | undefined`
+// in this object we have a couple of properties `pageParams` and `pages` data for all the pages
+//
+
+  {posts?.map((post) => (
+    <li key={post.id} className="list-group-item">
+      {post.title}
+    </li>
+  ))}
+</ul>
+```
+
+now the `data` we get is no longer an array of Posts, it's of type `InfiniteData | undefined` which is an object with `pages` "all the fetched data" and `pageParams`, which needs a different approach for rendering the fetched data
+
+in other words instead of iterating over `data` we should loop over `data.pages` and render the data for each page separately
+
+### full example UI render
+
+```tsx
+import React, { useState } from "react";
+import usePosts from "../hooks/usePosts";
+
+const PostList = () => {
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  // const { data: posts, error, isLoading } = usePosts({ page, pageSize });
+
+  const { data, error, isLoading, fetchNextPage, isFetchingNextPage } =
+    usePosts({ pageSize }); // remove page number
+
+  if (isLoading) return <p>loading...</p>;
+
+  return (
+    <>
+      <ul className="list-group my-5">
+        {data?.pages.map((page, index) => (
+          <React.Fragment key={index}>
+            {page.map((post) => (
+              <li key={post.id} className="list-group-item">
+                {post.title}
+              </li>
+            ))}
+          </React.Fragment>
+        ))}
+      </ul>
+
+      <button
+        className="btn btn-primary me-3"
+        onClick={() => fetchNextPage()}
+        disabled={isFetchingNextPage}
+      >
+        {isFetchingNextPage ? "loading..." : "load more"}
+      </button>
+    </>
+  );
+};
+
+export default PostList;
+```
+
+### full example custom hook
+
+```tsx
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import axios from "axios";
+
+interface Post {
+  id: number;
+  title: string;
+  body: string;
+  userId: number;
+}
+
+interface PostQuery {
+  // remove "page" from our interface
+  // page: number;
+  pageSize: number;
+}
+const usePosts = (query: PostQuery) => {
+  return useInfiniteQuery<Post[], Error>({
+    queryKey: ["posts", query],
+    queryFn: ({ pageParam = 1 }) =>
+      axios
+        .get<Post[]>("https://jsonplaceholder.typicode.com/posts", {
+          params: {
+            _start: (pageParam - 1) * query.pageSize,
+            _limit: query.pageSize,
+          },
+        })
+        .then((res) => res.data),
+    staleTime: 60 * 1000,
+    cacheTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    keepPreviousData: true,
+    getNextPageParam: (lastPage, allPages) => {
+      // for jsonplacdholder api we don't know that we've reached the last page! but if we ask for a page that doesn't exist we'll get 'undefined'
+
+      // also if we return "undefined" as the nextPage number RQ stops fetching data for the nextPage
+      return lastPage.length > 0 ? allPages.length + 1 : undefined;
+    },
+  });
+};
+
+export default usePosts;
+```
+
+Let’s dive into **infinite queries** with React Query — one of its most powerful and fun features, especially for things like:
+
+- Infinite scrolling (Reddit-style feed)
+- “Load more” buttons (game lists, search results, etc.)
+- Pagination where pages depend on previous results
+
+---
+
+### 🔁 What Is `useInfiniteQuery`?
+
+`useInfiniteQuery` is like `useQuery`, but it’s designed for **paginated data** where you load more pages dynamically — either on scroll or on user action.
+
+Instead of just `queryFn`, you use `getNextPageParam` to tell React Query **how to fetch the next page**.
+
+---
+
+### 🧱 Basic Structure
+
+```tsx
+const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  useInfiniteQuery({
+    queryKey: ["games"],
+    queryFn: ({ pageParam = 1 }) => fetchGames(pageParam),
+    getNextPageParam: (lastPage, pages) => {
+      return lastPage.nextPage ?? false;
+    },
+  });
+```
+
+---
+
+### 🔍 How It Works
+
+- `pageParam` is passed to your `queryFn` — defaulting to `1`
+- `getNextPageParam` inspects the last page and decides if there’s another page
+- You call `fetchNextPage()` to load the next page
+- React Query appends new results to `data.pages`
+
+---
+
+### 🧠 Real Example (with a Fake API)
+
+#### 👨‍🍳 `fetchGames.js`
+
+```ts
+export const fetchGames = async (page = 1) => {
+  const res = await fetch(`/api/games?page=${page}`);
+  const data = await res.json();
+  return {
+    games: data.results,
+    nextPage: data.nextPage, // e.g. 2, 3, or null
+  };
+};
+```
+
+#### 🎮 `GamesList.tsx`
+
+```tsx
+const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
+  useInfiniteQuery({
+    queryKey: ["games"],
+    queryFn: ({ pageParam = 1 }) => fetchGames(pageParam),
+    getNextPageParam: (lastPage) => lastPage.nextPage,
+  });
+
+if (status === "loading") return <p>Loading...</p>;
+if (status === "error") return <p>Error loading games</p>;
+
+return (
+  <>
+    {data.pages.map((page, i) => (
+      <React.Fragment key={i}>
+        {page.games.map((game) => (
+          <div key={game.id}>{game.title}</div>
+        ))}
+      </React.Fragment>
+    ))}
+
+    <button
+      onClick={() => fetchNextPage()}
+      disabled={!hasNextPage || isFetchingNextPage}
+    >
+      {isFetchingNextPage
+        ? "Loading more..."
+        : hasNextPage
+        ? "Load More"
+        : "No more games"}
+    </button>
+  </>
+);
+```
+
+---
+
+### 🔁 Want to Use **Infinite Scrolling Instead of a Button**?
+
+Use an **Intersection Observer** to auto-fetch when a "sentinel" div is visible:
+
+```tsx
+const observerRef = useRef();
+useEffect(() => {
+  const observer = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting && hasNextPage) {
+      fetchNextPage();
+    }
+  });
+
+  if (observerRef.current) observer.observe(observerRef.current);
+  return () => observer.disconnect();
+}, [hasNextPage, fetchNextPage]);
+```
+
+Then in JSX:
+
+```tsx
+<div ref={observerRef}></div>
+```
+
+---
+
+### 🛠 When to Use It in GameHub
+
+Perfect for:
+
+- Loading games page by page
+- Loading genres, reviews, or search results
+- Infinite scroll in a grid or list layout
