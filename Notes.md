@@ -1261,3 +1261,199 @@ Perfect for:
 - Loading games page by page
 - Loading genres, reviews, or search results
 - Infinite scroll in a grid or list layout
+
+## Mutations, 🧠 What Is a Mutation?
+
+A **mutation** is used when you're changing data:
+
+| Action        | Use Query? | Use Mutation? |
+| ------------- | ---------- | ------------- |
+| Fetching data | ✅ Yes     | ❌ No         |
+| Creating data | ❌ No      | ✅ Yes        |
+| Updating data | ❌ No      | ✅ Yes        |
+| Deleting data | ❌ No      | ✅ Yes        |
+
+React Query handles:
+
+- Sending the request ✅
+- Showing loading & error state ✅
+- Optionally refreshing your cache ✅
+- Rolling back on errors ✅
+
+---
+
+to use `useMutation` hook we need to do:
+
+### 1.
+
+call `useMutation()` which takes a configuration object, it takes a `mutationFn` just like the `useQuery` which takes a `queryFn`. this function takes the data that needs to be sent to the backend as an argument and then makes a backend call (e.x. axios or fetch) post/put/delete-ing that data and the result is just returned, this result is the server response as shown here
+
+```ts
+useMutation({
+  mutationFn: (data) => {
+    return axios.post("backend/api", data).then((res) => res.data);
+  },
+});
+```
+
+or it can be an async function
+
+```ts
+const addTodo = useMutation({
+  mutationFn: async (todo: Todo) => {
+    const res = await axios.post(
+      "https://jsonplaceholder.typicode.com/todos",
+      todo
+    );
+    return res.data;
+  },
+});
+```
+
+### 2.
+
+calling `useMutation` hook returns a `mutation` object "here we get it as `addTodo`", it has a `mutate` function which takes the data that needs to be sent to the backend, it literally is our `mutationFn` and here we provide that data as argument.
+
+```ts
+addTodo.mutate({
+  id: 0,
+  completed: true,
+  title: ref.current.value, // if ref.current is null this expression would be undefined as the result
+  userId: 1,
+});
+```
+
+### full example
+
+```tsx
+import { useMutation } from "@tanstack/react-query";
+import { useRef } from "react";
+import { Todo } from "../hooks/useTodos";
+import axios from "axios";
+
+const TodoForm = () => {
+  const ref = useRef<HTMLInputElement>(null);
+  const addTodo = useMutation({
+    mutationFn: async (todo: Todo) => {
+      const res = await axios.post(
+        "https://jsonplaceholder.typicode.com/todos",
+        todo
+      );
+      return res.data;
+    },
+  });
+
+  return (
+    <form
+      className="row mb-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (ref.current && ref.current.value)
+          addTodo.mutate({
+            id: 0,
+            completed: true,
+            title: ref.current.value, // if ref.current is null this expression would be undefined as the result
+            userId: 1,
+          });
+      }}
+    >
+      <div className="col">
+        <input ref={ref} type="text" className="form-control" />
+      </div>
+      <div className="col">
+        <button className="btn btn-primary">Add</button>
+      </div>
+    </form>
+  );
+};
+
+export default TodoForm;
+```
+
+### 3.
+
+`useMutation` hook also takes other callbacks for situations like "onSuccess", "onError" and "onSettle"
+
+```ts
+const addTodo = useMutation({
+  mutationFn: async (todo: Todo) => {
+    const res = await axios.post<Todo>(
+      "https://xjsonplaceholder.typicode.com/todos",
+      todo
+    );
+    return res.data;
+  },
+  onSuccess: (data: Todo) => {
+    //gets called on success
+    console.log("success! got data back: ", data);
+  },
+  onError: (error: Error) => {
+    //gets called on fail
+    console.log("something went wrong: ", error.message);
+  },
+  onSettled: () => {
+    //gets called either ways
+    console.log("reached the end of mutation");
+  },
+});
+```
+
+`onSuccess(data, variables)` data is what we get from the server, and variables is the data we sent to the server.
+
+### 4.
+
+updating the data:
+
+for updating data we have two ways:
+
+#### 1 invalidating the cache
+
+invalidating the cache, so RQ refetch data so we get the all fresh data, to do so we need to access our `queryClient` the one we initialized in our `main.tsx`, to get access to it `RQ` provides `useQueryClient` hook so we call it to get our `queryClient`
+
+and then we can call `invalidateQueries` with `queryKey` that we want to get refreshed. inside our `onSuccess` callback
+
+```ts
+queryClient.invalidateQueries({
+  queryKey: ["todos"],
+});
+```
+
+```tsx
+const queryClient = useQueryClient();
+const ref = useRef<HTMLInputElement>(null);
+const addTodo = useMutation({
+  mutationFn: async (todo: Todo) => {
+    const res = await axios.post<Todo>(
+      "https://xjsonplaceholder.typicode.com/todos",
+      todo
+    );
+    return res.data;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({
+      queryKey: ["todos"],
+    });
+  },
+});
+```
+
+#### 2 updating data in the cache directly
+
+updating data in the cache directly, using `setQueryData` which takes `setQueryData(queryKey, updater)` queryKey of which to be updated here `["todos"]`, updater which is a function to update the data.
+
+here is how to specify the types, because TS doesn't know what kind of data we're dealing with.
+
+so we use generics:
+
+```ts
+queryClient.setQueryData<Todo[]>(["todos"], (todos) => [
+  savedTodos,
+  ...(todos || []),
+]);
+```
+
+now for the `updater` function: it takes an array of `Todos` and returns an array of `Todos`, it know about `Todos` because we provided `Todo[]` as a generic. the most important part is that this function should return updated data in an immutable way just like updating state.
+
+`queryClient.setQueryData<Todo[]>(["todos"], (todos) => [savedTodos, ...(todos || []),]);` here `savedTodos` is just data we get in the `onSuccess` callback we just renamed it.
+
+so we're adding the server's response in our array and then separating the `todos` we get as "argument" to this "updater" function and because it might be "undefined" we use `...(todos || [])` so we don't get compilation errors.
