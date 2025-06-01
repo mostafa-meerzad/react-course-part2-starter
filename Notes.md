@@ -2024,7 +2024,7 @@ Let me know if you'd like to simulate an error to see the rollback in action —
 
 ### Refactor
 
-Apply `Separation of Concerns` and `Single Responsibility` principles.
+- Apply `Separation of Concerns` and `Single Responsibility` principles.
 
 move posting `todos` logic to a custom hook which handles all that and just returns our `mutation` object
 which we can get and call in our UI.
@@ -2032,3 +2032,84 @@ which we can get and call in our UI.
 remove handling `if (ref.current) ref.current.value = "";` from custom hook. which it is UI responsibility and we shouldn't have to deal with this in our API logic. to solve it we provide a callback function from our custom hook the the consumer of that hook, allowing them to handle UI updates when the data is successfully sent to the backend.
 
 move ["todos"] key into a single place `constants.ts` file, to avoid repeating the same value over and over, which opens room for bugs and problems. this way we can modify this key in a single place and save ourselves in the future.
+
+- the other issue is that we're repeating our endpoint on multiple places, in `useTodos` and `useAddTodos`, we can extract that endpoint into a constant and then import it, but that wouldn't solve our underlying issus! which is our querying logic has leaked into our hooks!. so we're sending a get request to our endpoint, extracting data from response.
+
+to solve it we can create a `reuseable api-client`
+
+You're on the right track—and your determination is exactly what it takes. Let's fix this problem step by step.
+
+---
+
+### ✅ Problem Recap:
+
+You created an instance of your `APIClient` like this:
+
+```ts
+const apiClient = new APIClient<Todo[]>("/todos");
+```
+
+But when you call `apiClient.getAll`, you're unexpectedly getting the **homepage HTML** from [https://jsonplaceholder.typicode.com](https://jsonplaceholder.typicode.com), **not** the `/todos` data.
+
+---
+
+### 🧠 Root Cause:
+
+The issue is **how the `getAll` method is passed to React Query**.
+
+This line:
+
+```ts
+queryFn: apiClient.getAll,
+```
+
+**does not preserve the `this` context** of the class method. So when `getAll` is executed by React Query, it doesn't know about the correct `this.endpoint`, and `axios` is called with `undefined` or an empty path (`""`), which defaults to the base URL (i.e., homepage).
+
+---
+
+### ✅ Solution: Bind the method or use an arrow function
+
+**Option 1: Use an inline arrow function (recommended)**
+
+```ts
+return useQuery<Todo[], Error>({
+  queryKey: CACHE_KEY_TODOS,
+  queryFn: () => apiClient.getAll(),
+});
+```
+
+This way, `getAll()` is executed with the correct `this`.
+
+---
+
+**Option 2: Bind the method manually (less readable)**
+
+You could bind the method in the constructor, but it's less clean:
+
+```ts
+this.getAll = this.getAll.bind(this);
+```
+
+But using an arrow function inside `useQuery` is clearer.
+
+---
+
+### ✅ Summary
+
+Just change this:
+
+```ts
+queryFn: apiClient.getAll,
+```
+
+to:
+
+```ts
+queryFn: () => apiClient.getAll(),
+```
+
+and it’ll work as expected.
+
+---
+
+Let me know if you want to do the same for `post()` with React Query mutations next.
