@@ -2021,3 +2021,14 @@ This ensures your app doesn’t crash under edge cases or weird user input.
 ---
 
 Let me know if you'd like to simulate an error to see the rollback in action — we can add a condition like `if (todo.title.includes("fail")) throw new Error("Simulated error")`.
+
+### Refactor
+
+Apply `Separation of Concerns` and `Single Responsibility` principles.
+
+move posting `todos` logic to a custom hook which handles all that and just returns our `mutation` object
+which we can get and call in our UI.
+
+remove handling `if (ref.current) ref.current.value = "";` from custom hook. which it is UI responsibility and we shouldn't have to deal with this in our API logic. to solve it we provide a callback function from our custom hook the the consumer of that hook, allowing them to handle UI updates when the data is successfully sent to the backend.
+
+move ["todos"] key into a single place `constants.ts` file, to avoid repeating the same value over and over, which opens room for bugs and problems. this way we can modify this key in a single place and save ourselves in the future.
