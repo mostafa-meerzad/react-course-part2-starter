@@ -1537,3 +1537,13 @@ const TodoForm = () => {
 
 export default TodoForm;
 ```
+
+### Showing Mutation Progress
+
+just like `useQuery`, `useMutation` the object returned contains a `isLoading` boolean.
+
+```tsx
+<button className="btn btn-primary" disabled={addTodo.isLoading}>
+  {addTodo.isLoading ? "...loading" : "Add"}
+</button>
+```
