@@ -2113,3 +2113,18 @@ and it’ll work as expected.
 ---
 
 Let me know if you want to do the same for `post()` with React Query mutations next.
+
+### define a single place for instantiating the APIClient class
+
+```ts
+import APIClient from "./apiClient";
+
+export interface Todo {
+  id: number;
+  title: string;
+  userId: number;
+  completed: boolean;
+}
+
+export default new APIClient<Todo>("/todos");
+```
