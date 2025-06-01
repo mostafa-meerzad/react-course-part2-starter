@@ -1457,3 +1457,83 @@ now for the `updater` function: it takes an array of `Todos` and returns an arra
 `queryClient.setQueryData<Todo[]>(["todos"], (todos) => [savedTodos, ...(todos || []),]);` here `savedTodos` is just data we get in the `onSuccess` callback we just renamed it.
 
 so we're adding the server's response in our array and then separating the `todos` we get as "argument" to this "updater" function and because it might be "undefined" we use `...(todos || [])` so we don't get compilation errors.
+
+### Handing Errors
+
+to handle errors when our request to the backend fails. the mutation object we get from calling `useMutation` hook has a `error` property which represents the failure error.
+
+```tsx
+{
+  addTodo.error && (
+    <div className="alert alert.danger">{addTodo.error?.message}</div>
+  );
+}
+```
+
+for type safety we need to provide generic types to our `useMutation` hook like so `useMutation<SendDataType, ErrorType, ReceiveDataType>()` in our example it is `useMutation<Todo, Error, Todo>()` but this part can be different from backend to backend
+
+```tsx
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
+import { Todo } from "../hooks/useTodos";
+import axios from "axios";
+
+const TodoForm = () => {
+  const queryClient = useQueryClient();
+  const ref = useRef<HTMLInputElement>(null);
+  const addTodo = useMutation<Todo, Error, Todo>({
+    mutationFn: async (todo: Todo) => {
+      const res = await axios.post<Todo>(
+        "https://jsonplaceholder.typicode.com/todos",
+        todo
+      );
+      return res.data;
+    },
+    onSuccess: (savedTodos, newTodo) => {
+      // console.log("success! got data back: ", data);
+      // queryClient.invalidateQueries({queryKey: ["todos"]});
+
+      queryClient.setQueryData<Todo[]>(["todos"], (todos) => [
+        savedTodos,
+        ...(todos || []),
+      ]);
+    },
+    onError: (error: Error) => {
+      console.log("something went wrong: ", error.message);
+    },
+    onSettled: () => {
+      console.log("reached the end of mutation");
+    },
+  });
+
+  return (
+    <>
+      {addTodo.error && (
+        <div className="alert alert.danger">{addTodo.error?.message}</div>
+      )}
+      <form
+        className="row mb-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (ref.current && ref.current.value)
+            addTodo.mutate({
+              id: 0,
+              completed: true,
+              title: ref.current.value, // if ref.current is null this expression would be undefined as the result
+              userId: 1,
+            });
+        }}
+      >
+        <div className="col">
+          <input ref={ref} type="text" className="form-control" />
+        </div>
+        <div className="col">
+          <button className="btn btn-primary">Add</button>
+        </div>
+      </form>
+    </>
+  );
+};
+
+export default TodoForm;
+```
