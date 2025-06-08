@@ -1,5 +1,5 @@
 import "./App.css";
-import AuthProvider from "./state-management/AuthProvider";
+import AuthProvider from "./state-management/auth/AuthProvider";
 import NavBar from "./state-management/NavBar";
 import { TaskList, TasksProvider } from "./state-management/task";
 
