@@ -482,3 +482,148 @@ Avoid placing unnecessary state in your store. Only global, shared state should 
 | ✅ Keep Store Focused     | Don’t put unrelated state in one store                                            |
 | ✅ Avoid Large Objects    | Don’t select large objects (they create new references)                           |
 | ⚠️ Avoid Inline Selectors | Don’t write `useStore(() => state.count + 1)` — recomputes every render           |
+
+## Inspect Stores with Zustand DevTools
+
+You're in for a treat — **Zustand DevTools** are super helpful for debugging and understanding state changes, especially in larger apps. Let's break it down step by step, no assumptions made. 😊
+
+---
+
+## ✅ What Are Zustand DevTools?
+
+Zustand DevTools are **browser development tools integration** (like Redux DevTools). They let you:
+
+- 🔍 Inspect your store's state
+- 🔄 See state changes over time (like a timeline)
+- 🧪 Dispatch actions manually (for testing)
+- 📚 Track what caused each update
+
+It uses the **Redux DevTools extension** under the hood, so you’ll need that installed.
+
+---
+
+## 🛠 How to Enable DevTools in Zustand
+
+Zustand doesn’t include devtools by default — it comes from a **middleware** called `devtools`.
+
+### 1. Install Zustand (if not already)
+
+```bash
+npm install zustand
+```
+
+### 2. Import `devtools` middleware
+
+```ts
+import { create } from "zustand";
+import { devtools } from "zustand/middleware";
+```
+
+### 3. Wrap Your Store
+
+Here’s how it looks with TypeScript:
+
+```ts
+type BearState = {
+  bears: number;
+  increase: () => void;
+};
+
+export const useBearStore = create<BearState>()(
+  devtools(
+    (set) => ({
+      bears: 0,
+      increase: () => set((state) => ({ bears: state.bears + 1 })),
+    }),
+    { name: "BearStore" }
+  ) // 👈 optional name for DevTools
+);
+```
+
+> ✅ Now every state change is logged in the Redux DevTools tab in your browser.
+
+---
+
+## 🧪 How to Use It
+
+1. **Install Redux DevTools Extension** in Chrome or Firefox:
+
+   - [Chrome Extension](https://chrome.google.com/webstore/detail/redux-devtools/lmhkpmbekcpmknklioeibfkpmmfibljd)
+
+2. Open your app → **DevTools → Redux tab**
+
+3. You’ll see:
+
+   - The current state (`bears: 0`)
+   - A log of actions (`increase`)
+   - You can even **dispatch fake actions** to test state changes
+
+---
+
+## ✍️ Naming Actions
+
+By default, actions show up as `anonymous`. You can **label actions** manually using an optional third argument to `set`:
+
+```ts
+increase: () =>
+  set((state) => ({ bears: state.bears + 1 }), false, "bear/increase");
+```
+
+> 🔎 This helps make the devtools log easier to understand.
+
+---
+
+## 💡 Tips for TypeScript
+
+If you get TS errors with middleware, make sure you **call `create()` before wrapping**:
+
+```ts
+const useStore = create<State>()(devtools((set) => ({})));
+```
+
+This avoids TypeScript inference issues with middleware.
+
+---
+
+## 💡 When to Use DevTools
+
+| Situation           | Use DevTools?                         |
+| ------------------- | ------------------------------------- |
+| Small toy project   | ❌ Not needed                         |
+| Medium or large app | ✅ Yes                                |
+| Team debugging      | ✅ Definitely                         |
+| Complex stores      | ✅ Helps a lot                        |
+| Production          | ⚠️ Disable for performance & security |
+
+---
+
+## 🚫 Disabling in Production
+
+You can wrap it conditionally:
+
+```ts
+const useStore = create<State>()(
+  devtools(
+    (set) => ({
+      // state/actions
+    }),
+    { enabled: process.env.NODE_ENV === "development" }
+  )
+);
+```
+
+---
+
+## ✅ Summary
+
+| Feature               | Description                                           |
+| --------------------- | ----------------------------------------------------- |
+| `devtools` middleware | Adds Redux DevTools support                           |
+| `name` option         | Labels the store in the DevTools                      |
+| Action labels         | Use 3rd arg in `set` to name actions                  |
+| Conditional use       | Only enable in development builds                     |
+| DevTools UI           | Timeline, actions, manual dispatch, and state preview |
+
+---
+
+Would you like a working demo of a Zustand store with DevTools that you can copy and run? I can also show you how to combine DevTools with `persist` or `immer` middleware if you're interested.
