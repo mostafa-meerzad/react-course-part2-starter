@@ -338,3 +338,147 @@ const Navbar = () => {
 - Zustand is **simple, fast, and scalable**.
 - It works great with **TypeScript**, localStorage, and advanced patterns like Immer.
 - Use Zustand when you want **global state** without heavy boilerplate.
+
+## Avoid Unnecessary Re-Renders
+
+Great question — **preventing unnecessary re-renders** is one of Zustand’s biggest advantages over other state management tools like React Context or Redux (without Reselect). Zustand is designed with **performance in mind**, and it gives you fine control over which components re-render.
+
+Let’s walk through **how Zustand prevents re-renders**, how **you can control re-renders using selectors**, and **some advanced techniques** like `shallow` comparison.
+
+---
+
+## 🧠 The Problem
+
+In many global state tools, when **any part** of the state updates, **all subscribed components** re-render — even if they don’t use the changed part of the state.
+
+🔁 This leads to **wasted renders**.
+
+---
+
+## ✅ Zustand’s Solution: **Selectors**
+
+Zustand lets you **select only the slice of state** your component needs:
+
+```tsx
+const count = useCounterStore((state) => state.count);
+```
+
+> ✅ The component will only re-render if `count` changes — not if something else in the store changes.
+
+This is the **#1 best practice** for preventing unnecessary re-renders.
+
+---
+
+## ❌ Bad Practice: No Selector
+
+```tsx
+// ❌ This re-renders whenever *any* state changes
+const state = useStore(); // Avoid this pattern
+```
+
+---
+
+## ✅ Good Practice: Use a Selector Function
+
+```tsx
+// ✅ This re-renders only when `count` changes
+const count = useStore((state) => state.count);
+```
+
+---
+
+## 📘 Example Store
+
+```ts
+type State = {
+  count: number;
+  name: string;
+  increment: () => void;
+};
+
+export const useStore = create<State>((set) => ({
+  count: 0,
+  name: "Zustand",
+  increment: () => set((s) => ({ count: s.count + 1 })),
+}));
+```
+
+### Usage
+
+```tsx
+// ✅ Only re-renders when `count` changes
+const count = useStore((s) => s.count);
+
+// ✅ Only re-renders when `name` changes
+const name = useStore((s) => s.name);
+```
+
+---
+
+## 🔍 Fine-Grained Renders with `shallow`
+
+Sometimes you want to select **multiple values**, but **only re-render if one of them changes**.
+
+### ✅ Solution: Use `shallow` comparison
+
+```ts
+import { shallow } from "zustand/shallow";
+
+const { count, name } = useStore(
+  (state) => ({ count: state.count, name: state.name }),
+  shallow // compare selected props with shallow equality
+);
+```
+
+✅ This avoids re-rendering unless either `count` or `name` actually changes (object identity is ignored — shallow compare is used).
+
+---
+
+## 🛠 When to Use `shallow`
+
+Use `shallow` **when selecting multiple properties**:
+
+```tsx
+const { a, b } = useStore((s) => ({ a: s.a, b: s.b }), shallow);
+```
+
+Otherwise, Zustand would re-render the component every time any part of the store updates — even if `a` and `b` didn't change — because the returned object is always a new object reference.
+
+---
+
+## 🧪 Custom Comparison Function
+
+If you need **even more control**, Zustand supports **custom equality functions**:
+
+```ts
+const someValue = useStore(
+  (state) => computeHeavyThing(state),
+  (a, b) => deepEqual(a, b) // Custom comparison
+);
+```
+
+But keep in mind:
+
+- Custom equality functions run on every state change
+- They're slower than `shallow`
+- Use only when needed
+
+---
+
+## 🚫 Pitfall: Updating Too Much
+
+Avoid placing unnecessary state in your store. Only global, shared state should go into Zustand.
+
+✅ Use React’s `useState` for local, isolated UI state — it’s faster and simpler.
+
+---
+
+## 🚀 Summary: Best Practices to Avoid Re-Renders
+
+| Tip                       | Description                                                                       |
+| ------------------------- | --------------------------------------------------------------------------------- |
+| ✅ Use Selectors          | Always use `(state) => state.someValue` instead of subscribing to the whole state |
+| ✅ Use `shallow`          | When selecting multiple properties from the store                                 |
+| ✅ Keep Store Focused     | Don’t put unrelated state in one store                                            |
+| ✅ Avoid Large Objects    | Don’t select large objects (they create new references)                           |
+| ⚠️ Avoid Inline Selectors | Don’t write `useStore(() => state.count + 1)` — recomputes every render           |
