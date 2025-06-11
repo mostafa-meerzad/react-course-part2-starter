@@ -108,3 +108,58 @@ const ContactPage = () => {
 
 export default ContactPage;
 ```
+
+## Passing Data with Route Parameters
+
+Sometimes we need to handle dynamic routes and pass data to our components through `URL`. for example when a we click on a user we want to pass the `user id` to the `URL`.
+
+### here is how
+
+In the `routes.tsx` we need to define route object/s which `parameters` as needed.
+
+**NOTE**: All parameters must be prefixed with `:` as shown below.
+
+```tsx
+import { createBrowserRouter } from "react-router-dom";
+import HomePage from "./routing/HomePage";
+import UserListPage from "./routing/UserListPage";
+import ContactPage from "./routing/ContactPage";
+import UserDetailPage from "./routing/UserDetailPage";
+
+const router = createBrowserRouter([
+  { path: "/", element: <HomePage /> },
+  { path: "/users", element: <UserListPage /> },
+  { path: "/users/:id", element: <UserDetailPage /> },
+  { path: "/posts/:year/:month", element: <SomeComponent /> }, // just for demonstration
+  { path: "/contact", element: <ContactPage /> },
+]);
+
+export default router;
+```
+
+and just like this you can pass data in route parameters
+
+```tsx
+import { Link } from "react-router-dom";
+
+const UserListPage = () => {
+  const users = [
+    { id: 1, name: "Mosh" },
+    { id: 2, name: "John" },
+    { id: 3, name: "Alice" },
+  ];
+  return (
+    <ul className="list-group">
+      {users.map((user) => (
+        <li className="list-group-item" key={user.id}>
+          <Link to={`/users/${user.id}`}>{user.name}</Link>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+export default UserListPage;
+```
+
+## Getting Data from Route Parameters
