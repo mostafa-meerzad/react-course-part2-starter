@@ -163,3 +163,93 @@ export default UserListPage;
 ```
 
 ## Getting Data from Route Parameters
+
+Sometimes we need to know which page we're on or what parameter values are passed in the URL, we have a bunch of hooks for that.
+
+### The useParams Hook
+
+the `useParams` hook is used to extract `parameter` values from the `URL`.
+
+you call it and it returns the `URL parameters` in an object.
+
+```tsx
+import { useParams } from "react-router-dom";
+
+const UserDetailPage = () => {
+  const params = useParams();
+  console.log(params);
+
+  return <p>User</p>;
+};
+
+export default UserDetailPage;
+```
+
+### The useSearchParams Hook
+
+We can access and update `query string parameters` with `useSearchParams`. similar to `useState` it returns an array of two elements `[searchParams, setSearchParams] = useSearchParams()`.
+
+`searchParams` by default might render as `{}` empty object
+
+`searchParams.toString()` to get query-string as a string
+
+`searchParams.get(parameterName)` if parameterName exists in the query-string, it is returned otherwise `null`
+
+**Note:** the `setSearchParams` function has `sideeffect` which is against react components laws, we need to be careful when using it, if we need to use it we should only use it within `eventHandlers` or inside an `effect`
+
+```tsx
+import { useParams, useSearchParams } from "react-router-dom";
+
+const UserDetailPage = () => {
+  const params = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  // console.log(params)
+  console.log(searchParams);
+  console.log(searchParams.toString());
+  console.log(searchParams.get("name"));
+  console.log(searchParams.get("age"));
+
+  return <p>User</p>;
+};
+
+export default UserDetailPage;
+```
+
+### The useLocation Hook
+
+with `useLocation` hook we can access the current location for example in this `http://localhost:5173/users/1?name=mostafa&password=123` route if we use `useLocation` hook we'll get an object like
+
+```js
+{
+    "pathname": "/users/1",
+    "search": "?name=mostafa&password=123",
+    "hash": "",
+    "state": null,
+    "key": "default"
+}
+```
+
+which contains information about `pathname`, `search` or `query-string` and much more.
+
+to use it, you just call it and it returns an object which you can store in a variable and use it as you need.
+
+```tsx
+import { useLocation, useParams, useSearchParams } from "react-router-dom";
+
+const UserDetailPage = () => {
+  const params = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  // console.log(params)
+  console.log(searchParams)
+  console.log(searchParams.toString())
+  console.log(searchParams.get("name"))
+  console.log(searchParams.get("age"))
+  const location = useLocation()
+  console.log(location)
+
+  return <p>User</p>;
+};
+
+export default UserDetailPage;
+
+```
