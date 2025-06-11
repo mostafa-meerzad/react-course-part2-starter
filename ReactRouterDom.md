@@ -44,7 +44,6 @@ const queryClient = new QueryClient();
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-
       <RouterProvider router={router} />
 
       <ReactQueryDevtools />
@@ -54,3 +53,58 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
 ```
 
 here we're allowing react-router to decide which component to render, instead of rendering a specific component like `App`.
+
+## Navigation
+
+### Use Link Component Between Page Navigation
+
+To allow uses to navigate between pages use `Link` component which comes from `react-router-dom` to navigate efficiently.
+
+You see the default behavior for `a` ("the anchor element") in HTML is to load the entire page. which is not good when all the data for all the pages are already shipped to the client.
+
+so use `Link` component and give it a `to` prop which is the URL for the target page.
+
+```tsx
+import { Link } from "react-router-dom";
+
+const HomePage = () => {
+  return (
+    <>
+      <p>
+        Lorem ipsum dolor sit amet consectetur, adipisicing elit. Incidunt,
+        mollitia!
+      </p>
+      <Link to="/users">Users</Link>
+    </>
+  );
+};
+
+export default HomePage;
+```
+
+this way we avoid unnecessary reloads on the client-side.
+
+### Programmatically Navigate Between Pages
+
+To navigate between pages use `useNavigate` hook from `react-router-dom` which return a `navigate` function, to navigate to a specific route all you need is to give this function a path, when you call it.
+
+```tsx
+import { useNavigate } from "react-router-dom";
+
+const ContactPage = () => {
+  const navigate = useNavigate();
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        // Redirect the user to the home page
+        navigate("/");
+      }}
+    >
+      <button className="btn btn-primary">Submit</button>
+    </form>
+  );
+};
+
+export default ContactPage;
+```
