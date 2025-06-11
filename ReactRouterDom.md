@@ -414,3 +414,89 @@ const NavBar = () => {
 
 export default NavBar;
 ```
+
+## Handling Errors
+
+When the user hits an invalid page `react-router-dom` returns a generic errorpage, but we can customize it with ease.
+
+in the `routes.tsx` file you set `errorElement` to a component that renders an error message, to the route you want the error to render to.
+
+```tsx
+import { createBrowserRouter } from "react-router-dom";
+import ContactPage from "./routing/ContactPage";
+import HomePage from "./routing/HomePage";
+import Layout from "./routing/Layout";
+import UserDetail from "./routing/UserDetail";
+import UsersPage from "./routing/UsersPage";
+import ErrorPage from "./routing/ErrorPage";
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Layout />,
+    errorElement: <ErrorPage />, // here we set ErrorPage to render when something goes wrong
+    children: [
+      { index: true, element: <HomePage /> },
+      {
+        path: "users",
+        element: <UsersPage />,
+        children: [{ path: ":id", element: <UserDetail /> }],
+      },
+      { path: "contact", element: <ContactPage /> },
+    ],
+  },
+]);
+
+export default router;
+```
+
+**Note:** this approach not only renders the `ErrorPage` for `Not Found` error but also renders when our app throws an error.
+
+in a real world application we want to log errors somewhere permanently, so we can debug it later.
+
+`Sentry` is one of these services that offer error logging for future diagnosis.
+
+### Getting the Errors
+
+to get the errors use `useRouteError` hook which returns the error object, which we can log it in the console or Sentry
+
+```tsx
+import { useRouteError } from "react-router-dom";
+
+const ErrorPage = () => {
+  const error = useRouteError();
+  console.log(error);
+  return (
+    <>
+      <h1>Oops...</h1>
+      <p>Sorry, an unexpected error has occurred.</p>
+    </>
+  );
+};
+
+export default ErrorPage;
+```
+
+#### Differentiate between User Error vs Application Error
+
+we can use `isRouteErrorResponse(error)` that takes the error object returned by `useRouteError` hook and returns boolean if `true` it means the user is trying to access an invalid route.
+
+```tsx
+import { isRouteErrorResponse, useRouteError } from "react-router-dom";
+
+const ErrorPage = () => {
+  const error = useRouteError();
+  // console.log(error);
+  return (
+    <>
+      <h1>Oops...</h1>
+      <p>
+        {isRouteErrorResponse(error) ? "page not found" : "something failed"}
+      </p>
+      {/* <p>Sorry, an unexpected error has occurred.</p> */}
+    </>
+  );
+};
+
+export default ErrorPage;
+```
