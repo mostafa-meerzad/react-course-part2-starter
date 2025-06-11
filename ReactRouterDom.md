@@ -365,3 +365,52 @@ const router = createBrowserRouter([
 
 export default router;
 ```
+
+## Styling the Active Link
+
+To apply some styles to the active link all we have to do is to use `NavLink` instead of `Link`, they are exactly the same but `NavLink` can apply styles to the currently active like via `className` prop. by default it add `active` css-class to the `className` and the good thing is that we can customize it! to return our custom css-class, all we have to to is `<NavLink className={({isActive})=> isActive ? "customActive": "blank/customInactive"}>`, provide an arrow function to the `className` and destructure `isActive` in the arguments which is a boolean, so based on this value you can get your custom css-class or anything according to your needs.
+
+```tsx
+import { Link, NavLink } from "react-router-dom";
+
+const NavBar = () => {
+  return (
+    <nav
+      className="navbar navbar-expand-lg"
+      style={{ background: "#f0f0f0", marginBottom: "1rem" }}
+    >
+      <div className="container-fluid">
+        <Link to={"/"} className="navbar-brand">
+          My App
+        </Link>
+        <div className="collapse navbar-collapse" id="navbarNav">
+          <ul className="navbar-nav">
+            <li className="nav-item">
+              <NavLink
+                className={({ isActive }) =>
+                  isActive ? "active nav-link" : "nav-link"
+                }
+                to="/"
+              >
+                Home
+              </NavLink>
+            </li>
+            <li className="nav-item">
+              <NavLink
+                className={({ isActive }) =>
+                  isActive ? "active nav-link" : "nav-link"
+                }
+                to="/users"
+              >
+                Users
+              </NavLink>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+  );
+};
+
+export default NavBar;
+```
