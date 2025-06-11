@@ -237,19 +237,131 @@ to use it, you just call it and it returns an object which you can store in a va
 import { useLocation, useParams, useSearchParams } from "react-router-dom";
 
 const UserDetailPage = () => {
-  const params = useParams()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const params = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   // console.log(params)
-  console.log(searchParams)
-  console.log(searchParams.toString())
-  console.log(searchParams.get("name"))
-  console.log(searchParams.get("age"))
-  const location = useLocation()
-  console.log(location)
+  console.log(searchParams);
+  console.log(searchParams.toString());
+  console.log(searchParams.get("name"));
+  console.log(searchParams.get("age"));
+  const location = useLocation();
+  console.log(location);
 
   return <p>User</p>;
 };
 
 export default UserDetailPage;
+```
 
+## Nested Routes
+
+In a real world application we typically have a `NavBar` and depending on which page the user's in, we render different components in the content area.
+
+### Apply Nested Routes
+
+#### The Outlet Component
+
+To render different components based on user's location we use the `Outlet` component, which is like a placeholder for `child` component, so at runtime based on user's current location different components will be rendered inside this `Outlet` component.
+
+#### Apply Nested Routes in the Routes.ts file
+
+In the `routes.ts` file we define a new `route object` just as usual, with `children` property which is an array of `route objects` and the path for child routes will be relative to the parent route.
+
+##### Before
+
+```tsx
+import { createBrowserRouter } from "react-router-dom";
+import HomePage from "./routing/HomePage";
+import UserListPage from "./routing/UserListPage";
+import ContactPage from "./routing/ContactPage";
+import UserDetailPage from "./routing/UserDetailPage";
+import Layout from "./routing/Layout";
+
+const router = createBrowserRouter([
+  { path: "/", element: <HomePage /> },
+  { path: "/users", element: <UserListPage /> },
+  { path: "/users/:id", element: <UserDetailPage /> },
+  { path: "/contact", element: <ContactPage /> },
+]);
+
+export default router;
+```
+
+#### Create the parent/root route
+
+```tsx
+import { createBrowserRouter } from "react-router-dom";
+import HomePage from "./routing/HomePage";
+import UserListPage from "./routing/UserListPage";
+import ContactPage from "./routing/ContactPage";
+import UserDetailPage from "./routing/UserDetailPage";
+import Layout from "./routing/Layout";
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Layout />,
+    children: [
+      { path: "/", element: <HomePage /> },
+      { path: "/users", element: <UserListPage /> },
+      { path: "/users/:id", element: <UserDetailPage /> },
+      { path: "/contact", element: <ContactPage /> },
+    ],
+  },
+]);
+
+export default router;
+```
+
+#### Final route object
+
+```tsx
+import { createBrowserRouter } from "react-router-dom";
+import HomePage from "./routing/HomePage";
+import UserListPage from "./routing/UserListPage";
+import ContactPage from "./routing/ContactPage";
+import UserDetailPage from "./routing/UserDetailPage";
+import Layout from "./routing/Layout";
+
+const router = createBrowserRouter([
+  {
+    path: "/", // now this is our root
+    element: <Layout />,
+    children: [
+      { path: "", element: <HomePage /> }, // so now our homepage route is relative to the root, and we don't need "/" just "" (empty) string is enough
+      // and because the path is an empty string we can replace it with `index: true`
+      { path: "users", element: <UserListPage /> }, // and for these routes we no longer need "/" at the beginning of each route
+      { path: "users/:id", element: <UserDetailPage /> },
+      { path: "contact", element: <ContactPage /> },
+    ],
+  },
+]);
+
+export default router;
+```
+
+#### Final Final route object
+
+```tsx
+import { createBrowserRouter } from "react-router-dom";
+import HomePage from "./routing/HomePage";
+import UserListPage from "./routing/UserListPage";
+import ContactPage from "./routing/ContactPage";
+import UserDetailPage from "./routing/UserDetailPage";
+import Layout from "./routing/Layout";
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Layout />,
+    children: [
+      { index: true, element: <HomePage /> },
+      { path: "users", element: <UserListPage /> },
+      { path: "users/:id", element: <UserDetailPage /> },
+      { path: "contact", element: <ContactPage /> },
+    ],
+  },
+]);
+
+export default router;
 ```
