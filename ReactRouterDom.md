@@ -565,3 +565,97 @@ const UsersPage = () => {
 
 export default UsersPage;
 ```
+
+### Layout Routes
+
+Sometimes we need to group routes for enforcing layouts or business-rules, this is where we can use Layout Routes.
+
+now we need to move the redirection logic from
+
+```tsx
+import { Navigate, Outlet } from "react-router-dom";
+import UserList from "./UserList";
+import useAuth from "./hooks/useAuth";
+
+const UsersPage = () => {
+  const { user } = useAuth();
+  if (!user) return <Navigate to={"/login"} />;
+
+  return (
+    <div className="row">
+      <div className="col">
+        <UserList />
+      </div>
+      <div className="col">
+        <Outlet />
+      </div>
+    </div>
+  );
+};
+
+export default UsersPage;
+```
+
+to
+
+`PrivateRoutes.tsx` by the way as a best practice create this file in the `src`
+
+```tsx
+import { Navigate, Outlet } from "react-router-dom";
+import useAuth from "./hooks/useAuth";
+
+const PrivateRoutes = () => {
+  const { user } = useAuth();
+  if (!user) return <Navigate to={"/login"} />;
+
+  // and return an outlet
+  return <Outlet />;
+};
+
+export default PrivateRoutes;
+```
+
+we're done with this component.
+
+inside the `routes.tsx` we need to create a new route next to our root-route, this route doesn't need the `path` because it is a layout-route and it's purpose is to group routes for enforcing layout or business-rules.
+
+so as it's element it takes the `PrivateRoutes.tsx` component we created. and takes `children` array we put any route that needs to be protected. like the `users` route
+
+```tsx
+import { createBrowserRouter } from "react-router-dom";
+import ContactPage from "./routing/ContactPage";
+import HomePage from "./routing/HomePage";
+import Layout from "./routing/Layout";
+import UserDetail from "./routing/UserDetail";
+import UsersPage from "./routing/UsersPage";
+import ErrorPage from "./routing/ErrorPage";
+import LoginPage from "./routing/LoginPage";
+import PrivateRoutes from "./routing/PrivateRoutes";
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Layout />,
+    errorElement: <ErrorPage />,
+    children: [
+      { index: true, element: <HomePage /> },
+      { path: "/login", element: <LoginPage /> },
+      { path: "contact", element: <ContactPage /> },
+    ],
+  },
+  {
+    element: <PrivateRoutes />,
+    children: [
+      {
+        path: "users",
+        element: <UsersPage />,
+        children: [{ path: ":id", element: <UserDetail /> }],
+      },
+    ],
+  },
+]);
+
+export default router;
+```
+
+now if you try to reach `/users` or any subroutes in `/users` route, you're redirected to "/login" page
