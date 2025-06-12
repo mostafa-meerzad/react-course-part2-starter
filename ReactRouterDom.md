@@ -500,3 +500,68 @@ const ErrorPage = () => {
 
 export default ErrorPage;
 ```
+
+## Private Routes
+
+In real world applications we often need to restrict access to certain routes to authenticated or logged in users. which are called `private routes`
+
+### The Navigate component
+
+Use this component to redirect unauthorized users to page like "login" or somewhere.
+
+DO NOT use "useNavigate" hook to redirect users, it's a hook and calling a hook conditionally is against hooks rules. on top of that it causes unexpected bugs like infinite-renders.
+
+```tsx
+import { createBrowserRouter } from "react-router-dom";
+import ContactPage from "./routing/ContactPage";
+import HomePage from "./routing/HomePage";
+import Layout from "./routing/Layout";
+import UserDetail from "./routing/UserDetail";
+import UsersPage from "./routing/UsersPage";
+import ErrorPage from "./routing/ErrorPage";
+import LoginPage from "./routing/LoginPage";
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Layout />,
+    errorElement: <ErrorPage />,
+    children: [
+      { index: true, element: <HomePage /> },
+      { path: "/login", element: <LoginPage /> },
+      {
+        path: "users",
+        element: <UsersPage />,
+        children: [{ path: ":id", element: <UserDetail /> }],
+      },
+      { path: "contact", element: <ContactPage /> },
+    ],
+  },
+]);
+
+export default router;
+```
+
+```tsx
+import { Navigate, Outlet } from "react-router-dom";
+import UserList from "./UserList";
+import useAuth from "./hooks/useAuth";
+
+const UsersPage = () => {
+  const { user } = useAuth();
+  if (!user) return <Navigate to={"/login"} />;
+
+  return (
+    <div className="row">
+      <div className="col">
+        <UserList />
+      </div>
+      <div className="col">
+        <Outlet />
+      </div>
+    </div>
+  );
+};
+
+export default UsersPage;
+```

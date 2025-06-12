@@ -1,7 +1,7 @@
 import { Link, useRouteError } from "react-router-dom";
 
 const HomePage = () => {
-throw new Error("something went wrong");
+// throw new Error("something went wrong");
   return (
     <>
       <p>
